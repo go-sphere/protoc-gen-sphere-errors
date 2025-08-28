@@ -11,7 +11,7 @@ import (
 
 const (
 	errorsPackage       = protogen.GoImportPath("errors")
-	statusErrorsPackage = protogen.GoImportPath("github.com/TBXark/sphere/core/errors/statuserr")
+	statusErrorsPackage = protogen.GoImportPath("github.com/go-sphere/sphere/core/errors/statuserr")
 )
 
 func GenerateFile(gen *protogen.Plugin, file *protogen.File) (*protogen.GeneratedFile, error) {

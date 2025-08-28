@@ -8,7 +8,7 @@
 To install `protoc-gen-sphere`, use the following command:
 
 ```bash
-go install github.com/TBXark/sphere/cmd/protoc-gen-go-errors@latest
+go install github.com/go-sphere/sphere/protoc-gen-go-errors@latest
 ```
 
 
@@ -22,10 +22,10 @@ managed:
   enabled: true
   disable:
     - file_option: go_package_prefix
-      module: buf.build/tbxark/errors
+      module: buf.build/go-sphere/errors
   override:
     - file_option: go_package_prefix
-      value: github.com/TBXark/sphere/layout/api
+      value: github.com/go-sphere/sphere-layout/api
     - local: protoc-gen-sphere-errors
       out: api
       opt: paths=source_relative
