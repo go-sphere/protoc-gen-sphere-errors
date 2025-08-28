@@ -5,10 +5,10 @@
 
 ## Installation
 
-To install `protoc-gen-sphere`, use the following command:
+To install `protoc-gen-go-errors`, use the following command:
 
 ```bash
-go install github.com/go-sphere/sphere/protoc-gen-go-errors@latest
+go install github.com/go-sphere/protoc-gen-go-errors@latest
 ```
 
 
