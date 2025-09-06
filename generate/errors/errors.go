@@ -10,18 +10,21 @@ import (
 )
 
 const (
-	errorsPackage       = protogen.GoImportPath("errors")
-	statusErrorsPackage = protogen.GoImportPath("github.com/go-sphere/sphere/core/errors/statuserr")
+	errorsPackage = protogen.GoImportPath("errors")
 )
 
-func GenerateFile(gen *protogen.Plugin, file *protogen.File) (*protogen.GeneratedFile, error) {
+type Config struct {
+	NewErrorsFunc protogen.GoIdent
+}
+
+func GenerateFile(gen *protogen.Plugin, file *protogen.File, config *Config) (*protogen.GeneratedFile, error) {
 	if len(file.Enums) == 0 || (!hasErrorEnums(file.Enums)) {
 		return nil, nil
 	}
 	filename := file.GeneratedFilenamePrefix + ".errors.pb.go"
 	g := gen.NewGeneratedFile(filename, file.GoImportPath)
 	generateFileHeader(gen, file, g)
-	err := generateFileContent(file, g)
+	err := generateFileContent(file, g, config)
 	if err != nil {
 		return nil, err
 	}
@@ -42,15 +45,12 @@ func generateFileHeader(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 	g.P()
 }
 
-func generateFileContent(file *protogen.File, g *protogen.GeneratedFile) error {
+func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, config *Config) error {
 	if len(file.Enums) == 0 {
 		return nil
 	}
-	g.QualifiedGoIdent(errorsPackage.Ident(""))
-	g.QualifiedGoIdent(statusErrorsPackage.Ident("Error"))
-	g.P()
 	for _, enum := range file.Enums {
-		err := generateErrorsReason(g, enum)
+		err := generateErrorsReason(g, enum, config)
 		if err != nil {
 			return err
 		}
@@ -58,13 +58,15 @@ func generateFileContent(file *protogen.File, g *protogen.GeneratedFile) error {
 	return nil
 }
 
-func generateErrorsReason(g *protogen.GeneratedFile, enum *protogen.Enum) error {
+func generateErrorsReason(g *protogen.GeneratedFile, enum *protogen.Enum, config *Config) error {
 	if !proto.HasExtension(enum.Desc.Options(), errors.E_DefaultStatus) {
 		return nil
 	}
 	defaultStatus := proto.GetExtension(enum.Desc.Options(), errors.E_DefaultStatus).(int32)
 	ew := template.ErrorWrapper{
-		Name: string(enum.Desc.Name()),
+		Name:           string(enum.Desc.Name()),
+		NewErrorsFunc:  g.QualifiedGoIdent(config.NewErrorsFunc),
+		ErrorsJoinFunc: g.QualifiedGoIdent(errorsPackage.Ident("Join")),
 	}
 	for _, v := range enum.Values {
 		options := generateEnumOptions(v, defaultStatus)
@@ -110,7 +112,9 @@ func generateEnumOptions(enum *protogen.EnumValue, defaultStatus int32) *errors.
 func hasErrorEnums(enum []*protogen.Enum) bool {
 	for _, v := range enum {
 		if proto.HasExtension(v.Desc.Options(), errors.E_DefaultStatus) {
-			return true
+			if len(v.Values) > 0 {
+				return true
+			}
 		}
 	}
 	return false

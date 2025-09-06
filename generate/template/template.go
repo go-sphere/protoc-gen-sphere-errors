@@ -29,8 +29,10 @@ func (i *ErrorInfo) HasMessage() bool {
 }
 
 type ErrorWrapper struct {
-	Name   string
-	Errors []*ErrorInfo
+	Name           string
+	Errors         []*ErrorInfo
+	NewErrorsFunc  string
+	ErrorsJoinFunc string
 }
 
 func (e *ErrorWrapper) Execute() (string, error) {

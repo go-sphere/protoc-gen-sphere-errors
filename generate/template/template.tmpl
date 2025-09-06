@@ -1,4 +1,6 @@
 {{- /*gotype: github.com/go-sphere/protoc-gen-sphere-errors/generate/template.ErrorInfo*/ -}}
+{{$newErrorsFunc := .NewErrorsFunc}}
+{{$errorsJoinFunc := .ErrorsJoinFunc}}
 func (e {{.Name}}) Error() string {
     switch e {
     {{- range .Errors }}
@@ -49,20 +51,20 @@ func (e {{.Name}}) Join(errs ...error) error {
     if msg == "" {
         msg = e.Error()
     }
-    return statuserr.NewError(
+    return {{$newErrorsFunc}}(
         e.GetStatus(),
         e.GetCode(),
         msg,
-        errors.Join(allErrs...),
+        {{$errorsJoinFunc}}(allErrs...),
     )
 }
 
 func (e {{.Name}}) JoinWithMessage(msg string, errs ...error) error {
     allErrs := append(errs, e)
-	return statuserr.NewError(
+	return {{$newErrorsFunc}}(
 	    e.GetStatus(),
 	    e.GetCode(),
 	    msg,
-        errors.Join(allErrs...),
+        {{$errorsJoinFunc}}(allErrs...),
 	)
 }

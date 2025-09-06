@@ -3,13 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/go-sphere/protoc-gen-sphere-errors/generate/errors"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
-var showVersion = flag.Bool("version", false, "print the version and exit")
+const (
+	defaultErrorsPackage = "github.com/go-sphere/sphere/core/errors/statuserr"
+)
+
+var (
+	showVersion   = flag.Bool("version", false, "print the version and exit")
+	newErrorsFunc = flag.String("new_errors_func", defaultErrorsPackage+";NewError", "new errors func, must be func(status, code int32, message string, err error) error")
+)
 
 func main() {
 	flag.Parse()
@@ -25,7 +33,16 @@ func main() {
 			if !f.Generate {
 				continue
 			}
-			_, gErr := errors.GenerateFile(gen, f)
+			errPkg := strings.Split(*newErrorsFunc, ";")
+			if len(errPkg) != 2 {
+				return fmt.Errorf("invalid new_errors_func format, expected 'path;ident'")
+			}
+			_, gErr := errors.GenerateFile(gen, f, &errors.Config{
+				NewErrorsFunc: protogen.GoIdent{
+					GoName:       errPkg[1],
+					GoImportPath: protogen.GoImportPath(errPkg[0]),
+				},
+			})
 			if gErr != nil {
 				return gErr
 			}
