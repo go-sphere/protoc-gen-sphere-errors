@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultErrorsPackage = "github.com/go-sphere/sphere/core/errors/statuserr"
+	defaultErrorsPackage = "github.com/go-sphere/httpx"
 )
 
 var (
