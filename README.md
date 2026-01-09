@@ -107,7 +107,6 @@ The plugin generates Go code with the following methods for each error enum:
 - `GetCode() int32` - Returns the error code (enum value)
 - `GetStatus() int32` - Returns the HTTP status code
 - `GetMessage() string` - Returns the custom error message
-- `GetReason() string` - Returns the error reason (if specified)
 - `Join(errs ...error) error` - Wraps the error with additional errors
 - `JoinWithMessage(msg string, errs ...error) error` - Wraps with custom message
 
@@ -118,15 +117,15 @@ Example generated code for the `TestError` enum:
 func (e TestError) Error() string {
     switch e {
     case TestError_TEST_ERROR_UNSPECIFIED:
-        return "TestError:TEST_ERROR_UNSPECIFIED"
+        return "TestError_TEST_ERROR_UNSPECIFIED"
     case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
-        return "TestError:TEST_ERROR_INVALID_FIELD_TEST1"
+        return "INVALID_ARGUMENT"  // Uses reason when specified
     case TestError_TEST_ERROR_INVALID_PATH_TEST2:
-        return "TestError:TEST_ERROR_INVALID_PATH_TEST2"
+        return "TestError_TEST_ERROR_INVALID_PATH_TEST2"
     case TestError_TEST_ERROR_UNAUTHORIZED:
-        return "TestError:TEST_ERROR_UNAUTHORIZED"
+        return "UNAUTHORIZED"  // Uses reason when specified
     case TestError_TEST_ERROR_FORBIDDEN:
-        return "TestError:TEST_ERROR_FORBIDDEN"
+        return "FORBIDDEN"  // Uses reason when specified
     default:
         return "TestError:UNKNOWN_ERROR"
     }
@@ -134,7 +133,20 @@ func (e TestError) Error() string {
 
 // GetCode returns the error code (enum value)
 func (e TestError) GetCode() int32 {
-    return int32(e)
+    switch e {
+    case TestError_TEST_ERROR_UNSPECIFIED:
+        return 0
+    case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
+        return 1000
+    case TestError_TEST_ERROR_INVALID_PATH_TEST2:
+        return 1001
+    case TestError_TEST_ERROR_UNAUTHORIZED:
+        return 1002
+    case TestError_TEST_ERROR_FORBIDDEN:
+        return 1003
+    default:
+        return 0
+    }
 }
 
 // GetStatus returns the HTTP status code
@@ -171,23 +183,9 @@ func (e TestError) GetMessage() string {
     }
 }
 
-// GetReason returns the error reason
-func (e TestError) GetReason() string {
-    switch e {
-    case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
-        return "INVALID_ARGUMENT"
-    case TestError_TEST_ERROR_UNAUTHORIZED:
-        return "UNAUTHORIZED"
-    case TestError_TEST_ERROR_FORBIDDEN:
-        return "FORBIDDEN"
-    default:
-        return ""
-    }
-}
-
 // Join wraps the error with additional errors
 func (e TestError) Join(errs ...error) error {
-    allErrs := append(errs, e)
+    allErrs := append([]error{e}, errs...)
     msg := e.GetMessage()
     if msg == "" {
         msg = e.Error()
@@ -202,7 +200,7 @@ func (e TestError) Join(errs ...error) error {
 
 // JoinWithMessage wraps the error with a custom message and additional errors
 func (e TestError) JoinWithMessage(msg string, errs ...error) error {
-    allErrs := append(errs, e)
+    allErrs := append([]error{e}, errs...)
     return statuserr.NewError(
         e.GetStatus(),
         e.GetCode(),
