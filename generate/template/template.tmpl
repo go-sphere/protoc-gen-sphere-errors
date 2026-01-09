@@ -5,7 +5,7 @@ func (e {{.Name}}) Error() string {
     switch e {
     {{- range .Errors }}
     case {{.Name}}_{{.Value}}:
-    {{ if .HasReason }}return "{{ .Reason }}";{{ else }}return "{{.Name}}:" + e.String(){{ end }}
+        {{ if .HasReason }}return "{{ .Reason }}";{{ else }}return "{{.Name}}_{{.Value}}";{{ end }}
     {{- end }}
     default:
         return "{{.Name}}:UNKNOWN_ERROR";
@@ -46,7 +46,7 @@ func (e {{.Name}}) GetMessage() string {
 }
 
 func (e {{.Name}}) Join(errs ...error) error {
-    allErrs := append(errs, e)
+    allErrs := append([]error{e}, errs...)
     msg := e.GetMessage()
     if msg == "" {
         msg = e.Error()
@@ -60,11 +60,11 @@ func (e {{.Name}}) Join(errs ...error) error {
 }
 
 func (e {{.Name}}) JoinWithMessage(msg string, errs ...error) error {
-    allErrs := append(errs, e)
-	return {{$newErrorsFunc}}(
-	    e.GetStatus(),
-	    e.GetCode(),
-	    msg,
+    allErrs := append([]error{e}, errs...)
+    return {{$newErrorsFunc}}(
+        e.GetStatus(),
+        e.GetCode(),
+        msg,
         {{$errorsJoinFunc}}(allErrs...),
-	)
+    )
 }

@@ -100,12 +100,12 @@ func generateEnumOptions(enum *protogen.EnumValue, defaultStatus int32) *errors.
 	if proto.HasExtension(enum.Desc.Options(), errors.E_Options) {
 		options := proto.GetExtension(enum.Desc.Options(), errors.E_Options)
 		return options.(*errors.Error)
-	} else {
-		return &errors.Error{
-			Status:  defaultStatus,
-			Reason:  "",
-			Message: "",
-		}
+	}
+
+	return &errors.Error{
+		Status:  defaultStatus,
+		Reason:  "",
+		Message: "",
 	}
 }
 
