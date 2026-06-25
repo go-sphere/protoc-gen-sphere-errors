@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package tests.mixed;
+
+import "sphere/errors/errors.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-errors/generate/errors/testdata/mixed";
+
+// AuthError is an error enum and should generate code.
+enum AuthError {
+  option (sphere.errors.default_status) = 401;
+
+  AUTH_ERROR_UNSPECIFIED = 0;
+  AUTH_ERROR_TOKEN_EXPIRED = 1 [(sphere.errors.options) = {
+    reason: "token expired",
+    message: "the access token has expired"
+  }];
+}
+
+// Color is a normal enum without the default_status option and must be skipped.
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+  COLOR_GREEN = 2;
+}

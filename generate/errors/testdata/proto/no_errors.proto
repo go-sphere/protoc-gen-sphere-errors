@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package tests.noerrors;
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-errors/generate/errors/testdata/noerrors";
+
+// Color has no default_status option, so no file should be generated.
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1;
+}

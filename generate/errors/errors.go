@@ -7,6 +7,7 @@ import (
 	"github.com/go-sphere/protoc-gen-sphere-errors/generate/template"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/pluginpb"
 )
 
 const (
@@ -18,14 +19,13 @@ type Config struct {
 }
 
 func GenerateFile(gen *protogen.Plugin, file *protogen.File, config *Config) (*protogen.GeneratedFile, error) {
-	if len(file.Enums) == 0 || (!hasErrorEnums(file.Enums)) {
+	if len(file.Enums) == 0 || !hasErrorEnums(file.Enums) {
 		return nil, nil
 	}
 	filename := file.GeneratedFilenamePrefix + ".errors.pb.go"
 	g := gen.NewGeneratedFile(filename, file.GoImportPath)
 	generateFileHeader(gen, file, g)
-	err := generateFileContent(file, g, config)
-	if err != nil {
+	if err := generateFileContent(file, g, config); err != nil {
 		return nil, err
 	}
 	return g, nil
@@ -46,85 +46,102 @@ func generateFileHeader(gen *protogen.Plugin, file *protogen.File, g *protogen.G
 }
 
 func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, config *Config) error {
-	if len(file.Enums) == 0 {
-		return nil
-	}
+	newErrorsFunc := g.QualifiedGoIdent(config.NewErrorsFunc)
+	errorsJoinFunc := g.QualifiedGoIdent(errorsPackage.Ident("Join"))
 	for _, enum := range file.Enums {
-		err := generateErrorsReason(g, enum, config)
+		ew := buildErrorWrapper(enum, newErrorsFunc, errorsJoinFunc)
+		if ew == nil {
+			continue
+		}
+		content, err := ew.Execute()
 		if err != nil {
 			return err
 		}
+		g.P(content)
+		g.P("\n\n")
 	}
 	return nil
 }
 
-func generateErrorsReason(g *protogen.GeneratedFile, enum *protogen.Enum, config *Config) error {
+// buildErrorWrapper builds a template.ErrorWrapper from an enum. It returns nil
+// when the enum is not an error enum (the default_status option is missing) or
+// when it has no values. newErrorsFunc and errorsJoinFunc must be the already
+// qualified Go identifiers used by the generated code.
+func buildErrorWrapper(enum *protogen.Enum, newErrorsFunc, errorsJoinFunc string) *template.ErrorWrapper {
 	if !proto.HasExtension(enum.Desc.Options(), errors.E_DefaultStatus) {
 		return nil
 	}
-	defaultStatus := proto.GetExtension(enum.Desc.Options(), errors.E_DefaultStatus).(int32)
-	ew := template.ErrorWrapper{
+	defaultStatus, _ := proto.GetExtension(enum.Desc.Options(), errors.E_DefaultStatus).(int32)
+	ew := &template.ErrorWrapper{
 		Name:           string(enum.Desc.Name()),
-		NewErrorsFunc:  g.QualifiedGoIdent(config.NewErrorsFunc),
-		ErrorsJoinFunc: g.QualifiedGoIdent(errorsPackage.Ident("Join")),
+		NewErrorsFunc:  newErrorsFunc,
+		ErrorsJoinFunc: errorsJoinFunc,
 	}
 	for _, v := range enum.Values {
-		options := generateEnumOptions(v, defaultStatus)
-		if options.Status == 0 {
-			options.Status = defaultStatus
-		}
-		if options.Reason == "" {
-			options.Reason = string(enum.Desc.Name()) + ":" + string(v.Desc.Name())
-		}
-		err := &template.ErrorInfo{
-			Name:  string(enum.Desc.Name()),
-			Value: string(v.Desc.Name()),
-
-			Status:  options.Status,
-			Code:    int32(v.Desc.Number()),
-			Reason:  options.Reason,
-			Message: options.Message,
-		}
-		ew.Errors = append(ew.Errors, err)
+		info := resolveErrorInfo(
+			string(enum.Desc.Name()),
+			string(v.Desc.Name()),
+			int32(v.Desc.Number()),
+			enumValueOptions(v),
+			defaultStatus,
+		)
+		ew.Errors = append(ew.Errors, info)
 	}
 	if len(ew.Errors) == 0 {
 		return nil
 	}
-	content, err := ew.Execute()
-	if err != nil {
-		return err
-	}
-	g.P(content)
-	g.P("\n\n")
-	return nil
+	return ew
 }
 
-func generateEnumOptions(enum *protogen.EnumValue, defaultStatus int32) *errors.Error {
-	if proto.HasExtension(enum.Desc.Options(), errors.E_Options) {
-		options := proto.GetExtension(enum.Desc.Options(), errors.E_Options)
-		return options.(*errors.Error)
+// resolveErrorInfo computes the final template.ErrorInfo for an enum value,
+// falling back to the enum's default status and a generated reason when the
+// value omits them. It is pure and independent of protogen.
+func resolveErrorInfo(enumName, valueName string, code int32, opt *errors.Error, defaultStatus int32) *template.ErrorInfo {
+	status := opt.GetStatus()
+	if status == 0 {
+		status = defaultStatus
 	}
-
-	return &errors.Error{
-		Status:  defaultStatus,
-		Reason:  "",
-		Message: "",
+	reason := opt.GetReason()
+	if reason == "" {
+		reason = enumName + ":" + valueName
+	}
+	return &template.ErrorInfo{
+		Name:    enumName,
+		Value:   valueName,
+		Status:  status,
+		Code:    code,
+		Reason:  reason,
+		Message: opt.GetMessage(),
 	}
 }
 
-func hasErrorEnums(enum []*protogen.Enum) bool {
-	for _, v := range enum {
-		if proto.HasExtension(v.Desc.Options(), errors.E_DefaultStatus) {
-			if len(v.Values) > 0 {
-				return true
-			}
+// enumValueOptions returns the errors.Error options attached to an enum value,
+// or an empty value when none are set.
+func enumValueOptions(v *protogen.EnumValue) *errors.Error {
+	if proto.HasExtension(v.Desc.Options(), errors.E_Options) {
+		if opt, ok := proto.GetExtension(v.Desc.Options(), errors.E_Options).(*errors.Error); ok && opt != nil {
+			return opt
+		}
+	}
+	return &errors.Error{}
+}
+
+func hasErrorEnums(enums []*protogen.Enum) bool {
+	for _, v := range enums {
+		if proto.HasExtension(v.Desc.Options(), errors.E_DefaultStatus) && len(v.Values) > 0 {
+			return true
 		}
 	}
 	return false
 }
 
 func protocVersion(gen *protogen.Plugin) string {
-	v := gen.Request.GetCompilerVersion()
+	return formatProtocVersion(gen.Request.GetCompilerVersion())
+}
+
+// formatProtocVersion formats a compiler version as e.g. "v5.29.0" or
+// "(unknown)" when no version is provided.
+func formatProtocVersion(v *pluginpb.Version) string {
 	if v == nil {
 		return "(unknown)"
 	}

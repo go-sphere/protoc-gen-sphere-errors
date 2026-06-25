@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package tests.basic;
+
+import "sphere/errors/errors.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-errors/generate/errors/testdata/basic";
+
+// UserError exercises explicit options, partial options (no message), and a
+// value with no options at all (default status + generated reason).
+enum UserError {
+  option (sphere.errors.default_status) = 400;
+
+  USER_ERROR_UNSPECIFIED = 0;
+  USER_ERROR_INVALID_ID = 1 [(sphere.errors.options) = {
+    status: 400,
+    reason: "invalid user id",
+    message: "invalid user ID format"
+  }];
+  USER_ERROR_NOT_FOUND = 2 [(sphere.errors.options) = {
+    status: 404,
+    reason: "user not found",
+    message: "user does not exist"
+  }];
+  USER_ERROR_PERMISSION_DENIED = 3 [(sphere.errors.options) = {
+    status: 403,
+    reason: "permission denied"
+  }];
+  USER_ERROR_DEFAULTED = 4;
+}
+
+// OrderError is a second error enum in the same file.
+enum OrderError {
+  option (sphere.errors.default_status) = 500;
+
+  ORDER_ERROR_UNSPECIFIED = 0;
+  ORDER_ERROR_OUT_OF_STOCK = 1 [(sphere.errors.options) = {
+    status: 400,
+    reason: "out of stock",
+    message: "product is out of stock"
+  }];
+}
