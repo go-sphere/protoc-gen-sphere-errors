@@ -87,10 +87,7 @@ func TestGolden(t *testing.T) {
 func firstDiff(want, got string) string {
 	wl := splitLines(want)
 	gl := splitLines(got)
-	n := len(wl)
-	if len(gl) < n {
-		n = len(gl)
-	}
+	n := min(len(gl), len(wl))
 	for i := 0; i < n; i++ {
 		if wl[i] != gl[i] {
 			return "first difference at line " + itoa(i+1) + ":\n  want: " + wl[i] + "\n  got:  " + gl[i]
