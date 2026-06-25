@@ -70,6 +70,9 @@ func generateErrorsReason(g *protogen.GeneratedFile, enum *protogen.Enum, config
 	}
 	for _, v := range enum.Values {
 		options := generateEnumOptions(v, defaultStatus)
+		if options.Status == 0 {
+			options.Status = defaultStatus
+		}
 		if options.Reason == "" {
 			options.Reason = string(enum.Desc.Name()) + ":" + string(v.Desc.Name())
 		}
