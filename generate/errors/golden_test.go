@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-sphere/protoc-gen-sphere-errors/generate/internal/testutil"
@@ -85,43 +87,15 @@ func TestGolden(t *testing.T) {
 // firstDiff returns a short description of the first line that differs between
 // want and got, which is enough to locate golden drift without a diff library.
 func firstDiff(want, got string) string {
-	wl := splitLines(want)
-	gl := splitLines(got)
-	n := min(len(gl), len(wl))
-	for i := 0; i < n; i++ {
+	wl := strings.Split(want, "\n")
+	gl := strings.Split(got, "\n")
+	for i := 0; i < min(len(wl), len(gl)); i++ {
 		if wl[i] != gl[i] {
-			return "first difference at line " + itoa(i+1) + ":\n  want: " + wl[i] + "\n  got:  " + gl[i]
+			return "first difference at line " + strconv.Itoa(i+1) + ":\n  want: " + wl[i] + "\n  got:  " + gl[i]
 		}
 	}
 	if len(wl) != len(gl) {
-		return "line count differs: want " + itoa(len(wl)) + ", got " + itoa(len(gl))
+		return "line count differs: want " + strconv.Itoa(len(wl)) + ", got " + strconv.Itoa(len(gl))
 	}
 	return "files differ only in trailing content"
-}
-
-func splitLines(s string) []string {
-	var out []string
-	start := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			out = append(out, s[start:i])
-			start = i + 1
-		}
-	}
-	out = append(out, s[start:])
-	return out
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var buf [20]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(buf[i:])
 }
