@@ -12,8 +12,6 @@ import (
 
 func (e AliasError) Error() string {
 	switch e {
-	case AliasError_ALIAS_ERROR_UNSPECIFIED:
-		return "AliasError:ALIAS_ERROR_UNSPECIFIED"
 	case AliasError_ALIAS_ERROR_INVALID:
 		return "invalid request"
 	default:
@@ -23,8 +21,6 @@ func (e AliasError) Error() string {
 
 func (e AliasError) GetCode() int32 {
 	switch e {
-	case AliasError_ALIAS_ERROR_UNSPECIFIED:
-		return 0
 	case AliasError_ALIAS_ERROR_INVALID:
 		return 1
 	default:
@@ -34,8 +30,6 @@ func (e AliasError) GetCode() int32 {
 
 func (e AliasError) GetStatus() int32 {
 	switch e {
-	case AliasError_ALIAS_ERROR_UNSPECIFIED:
-		return 400
 	case AliasError_ALIAS_ERROR_INVALID:
 		return 400
 	default:
@@ -45,8 +39,6 @@ func (e AliasError) GetStatus() int32 {
 
 func (e AliasError) GetMessage() string {
 	switch e {
-	case AliasError_ALIAS_ERROR_UNSPECIFIED:
-		return ""
 	case AliasError_ALIAS_ERROR_INVALID:
 		return "the request is invalid"
 	default:

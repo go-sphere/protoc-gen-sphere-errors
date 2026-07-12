@@ -12,8 +12,6 @@ import (
 
 func (e UserError) Error() string {
 	switch e {
-	case UserError_USER_ERROR_UNSPECIFIED:
-		return "UserError:USER_ERROR_UNSPECIFIED"
 	case UserError_USER_ERROR_INVALID_ID:
 		return "invalid user id"
 	case UserError_USER_ERROR_NOT_FOUND:
@@ -29,8 +27,6 @@ func (e UserError) Error() string {
 
 func (e UserError) GetCode() int32 {
 	switch e {
-	case UserError_USER_ERROR_UNSPECIFIED:
-		return 0
 	case UserError_USER_ERROR_INVALID_ID:
 		return 1
 	case UserError_USER_ERROR_NOT_FOUND:
@@ -46,8 +42,6 @@ func (e UserError) GetCode() int32 {
 
 func (e UserError) GetStatus() int32 {
 	switch e {
-	case UserError_USER_ERROR_UNSPECIFIED:
-		return 400
 	case UserError_USER_ERROR_INVALID_ID:
 		return 400
 	case UserError_USER_ERROR_NOT_FOUND:
@@ -63,8 +57,6 @@ func (e UserError) GetStatus() int32 {
 
 func (e UserError) GetMessage() string {
 	switch e {
-	case UserError_USER_ERROR_UNSPECIFIED:
-		return ""
 	case UserError_USER_ERROR_INVALID_ID:
 		return "invalid user ID format"
 	case UserError_USER_ERROR_NOT_FOUND:
@@ -104,8 +96,6 @@ func (e UserError) JoinWithMessage(msg string, errs ...error) error {
 
 func (e OrderError) Error() string {
 	switch e {
-	case OrderError_ORDER_ERROR_UNSPECIFIED:
-		return "OrderError:ORDER_ERROR_UNSPECIFIED"
 	case OrderError_ORDER_ERROR_OUT_OF_STOCK:
 		return "out of stock"
 	default:
@@ -115,8 +105,6 @@ func (e OrderError) Error() string {
 
 func (e OrderError) GetCode() int32 {
 	switch e {
-	case OrderError_ORDER_ERROR_UNSPECIFIED:
-		return 0
 	case OrderError_ORDER_ERROR_OUT_OF_STOCK:
 		return 1
 	default:
@@ -126,8 +114,6 @@ func (e OrderError) GetCode() int32 {
 
 func (e OrderError) GetStatus() int32 {
 	switch e {
-	case OrderError_ORDER_ERROR_UNSPECIFIED:
-		return 500
 	case OrderError_ORDER_ERROR_OUT_OF_STOCK:
 		return 400
 	default:
@@ -137,8 +123,6 @@ func (e OrderError) GetStatus() int32 {
 
 func (e OrderError) GetMessage() string {
 	switch e {
-	case OrderError_ORDER_ERROR_UNSPECIFIED:
-		return ""
 	case OrderError_ORDER_ERROR_OUT_OF_STOCK:
 		return "product is out of stock"
 	default:

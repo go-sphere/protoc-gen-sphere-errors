@@ -4,12 +4,21 @@
 package errors
 
 import (
+	"github.com/go-sphere/protoc-gen-sphere-errors/generate/internal/template"
 	"google.golang.org/protobuf/compiler/protogen"
 )
 
 // errorsPackage resolves to the standard library "errors" package, used for the
 // errors.Join call in the generated Join helpers.
 const errorsPackage = protogen.GoImportPath("errors")
+
+// ReplaceTemplateIfNeed overrides the built-in code template with the file at
+// path when path is non-empty. It must be called once before GenerateFile. It
+// is a thin wrapper over the internal template package so that callers (e.g.
+// main) need not import that internal package directly.
+func ReplaceTemplateIfNeed(path string) error {
+	return template.ReplaceTemplateIfNeed(path)
+}
 
 // Config controls error code generation.
 type Config struct {

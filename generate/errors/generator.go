@@ -49,6 +49,16 @@ func buildErrorWrapper(enum *protogen.Enum, newErrorsFunc, errorsJoinFunc string
 	seen := make(map[int32]struct{}, len(enum.Values))
 	for _, v := range enum.Values {
 		number := int32(v.Desc.Number())
+		// The zero value (typically <ENUM>_UNSPECIFIED) is the Go zero value of
+		// the type and semantically means "no error". Emitting a case for it
+		// would turn the zero value into a defined error (Error() non-empty,
+		// GetStatus() = default_status), so a plain `var e SomeError` returned
+		// as error would look like a real 500-ish failure. Skip number 0 so the
+		// zero value falls through to the switch default (unknown / 500) instead
+		// of being a mapped error.
+		if number == 0 {
+			continue
+		}
 		if _, ok := seen[number]; ok {
 			continue
 		}

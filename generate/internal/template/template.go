@@ -5,12 +5,27 @@ package template
 
 import (
 	_ "embed"
+	"os"
 	"strings"
 	"text/template"
 )
 
 //go:embed template.tmpl
 var errorsTemplate string
+
+// ReplaceTemplateIfNeed overrides the built-in template with the file at path
+// when path is non-empty. It must be called once before Execute. An empty path
+// leaves the embedded default in place.
+func ReplaceTemplateIfNeed(path string) error {
+	if path != "" {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		errorsTemplate = string(raw)
+	}
+	return nil
+}
 
 // ErrorInfo describes a single enum value rendered as an error case.
 type ErrorInfo struct {

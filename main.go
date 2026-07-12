@@ -17,6 +17,7 @@ const (
 var (
 	showVersion   = flag.Bool("version", false, "print the version and exit")
 	newErrorsFunc = flag.String("new_errors_func", defaultErrorsPackage+";NewError", "new errors func, must be func(status, code int32, message string, err error) error")
+	templateFile  = flag.String("template_file", "", "template file, if not set, use default template")
 )
 
 func main() {
@@ -29,6 +30,9 @@ func main() {
 		ParamFunc: flag.CommandLine.Set,
 	}.Run(func(gen *protogen.Plugin) error {
 		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
+		if err := errors.ReplaceTemplateIfNeed(*templateFile); err != nil {
+			return err
+		}
 		for _, f := range gen.Files {
 			if !f.Generate {
 				continue

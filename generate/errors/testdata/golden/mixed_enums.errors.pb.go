@@ -12,8 +12,6 @@ import (
 
 func (e AuthError) Error() string {
 	switch e {
-	case AuthError_AUTH_ERROR_UNSPECIFIED:
-		return "AuthError:AUTH_ERROR_UNSPECIFIED"
 	case AuthError_AUTH_ERROR_TOKEN_EXPIRED:
 		return "token expired"
 	default:
@@ -23,8 +21,6 @@ func (e AuthError) Error() string {
 
 func (e AuthError) GetCode() int32 {
 	switch e {
-	case AuthError_AUTH_ERROR_UNSPECIFIED:
-		return 0
 	case AuthError_AUTH_ERROR_TOKEN_EXPIRED:
 		return 1
 	default:
@@ -34,8 +30,6 @@ func (e AuthError) GetCode() int32 {
 
 func (e AuthError) GetStatus() int32 {
 	switch e {
-	case AuthError_AUTH_ERROR_UNSPECIFIED:
-		return 401
 	case AuthError_AUTH_ERROR_TOKEN_EXPIRED:
 		return 401
 	default:
@@ -45,8 +39,6 @@ func (e AuthError) GetStatus() int32 {
 
 func (e AuthError) GetMessage() string {
 	switch e {
-	case AuthError_AUTH_ERROR_UNSPECIFIED:
-		return ""
 	case AuthError_AUTH_ERROR_TOKEN_EXPIRED:
 		return "the access token has expired"
 	default:
