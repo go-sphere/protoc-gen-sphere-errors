@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package tests.alias;
+
+import "sphere/errors/errors.proto";
+
+option go_package = "github.com/go-sphere/protoc-gen-sphere-errors/generate/errors/testdata/alias";
+
+// AliasError enables allow_alias so several names share the same number. The
+// generator must emit a single switch case per number (keeping the first
+// declared name), otherwise the generated Go code has duplicate cases and fails
+// to compile.
+enum AliasError {
+  option allow_alias = true;
+  option (sphere.errors.default_status) = 400;
+
+  ALIAS_ERROR_UNSPECIFIED = 0;
+  ALIAS_ERROR_INVALID = 1 [(sphere.errors.options) = {
+    status: 400,
+    reason: "invalid request",
+    message: "the request is invalid"
+  }];
+  // ALIAS_ERROR_BAD_REQUEST aliases number 1; only the first declared name is
+  // used for the generated case.
+  ALIAS_ERROR_BAD_REQUEST = 1 [(sphere.errors.options) = {
+    status: 400,
+    reason: "bad request",
+    message: "the request is malformed"
+  }];
+}

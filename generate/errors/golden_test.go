@@ -36,6 +36,13 @@ func TestGolden(t *testing.T) {
 			goldenFile: "testdata/golden/mixed_enums.errors.pb.go",
 		},
 		{
+			name:       "alias_errors",
+			pbFile:     "testdata/pb/alias_errors.pb",
+			protoName:  "alias_errors.proto",
+			wantFile:   true,
+			goldenFile: "testdata/golden/alias_errors.errors.pb.go",
+		},
+		{
 			name:      "no_errors",
 			pbFile:    "testdata/pb/no_errors.pb",
 			protoName: "no_errors.proto",

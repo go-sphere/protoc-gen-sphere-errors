@@ -41,11 +41,22 @@ func buildErrorWrapper(enum *protogen.Enum, newErrorsFunc, errorsJoinFunc string
 		NewErrorsFunc:  newErrorsFunc,
 		ErrorsJoinFunc: errorsJoinFunc,
 	}
+	// When allow_alias is enabled an enum can declare several names for the
+	// same number, each a distinct EnumValueDescriptor. Emitting a switch case
+	// per descriptor would produce duplicate `case X_A:`/`case X_B:` entries
+	// that share a value, which the Go compiler rejects. Keep only the first
+	// declared name for each number.
+	seen := make(map[int32]struct{}, len(enum.Values))
 	for _, v := range enum.Values {
+		number := int32(v.Desc.Number())
+		if _, ok := seen[number]; ok {
+			continue
+		}
+		seen[number] = struct{}{}
 		info := resolveErrorInfo(
 			string(enum.Desc.Name()),
 			string(v.Desc.Name()),
-			int32(v.Desc.Number()),
+			number,
 			enumValueOptions(v),
 			defaultStatus,
 		)
