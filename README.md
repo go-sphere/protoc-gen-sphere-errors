@@ -103,12 +103,14 @@ enum UserError {
 
 The plugin generates Go code with the following methods for each error enum:
 
-- `Error() string` - Returns a string representation of the error
+- `Error() string` - Implements `error`. Returns `reason` when set, otherwise the enum value name
 - `GetCode() int32` - Returns the error code (enum value)
 - `GetStatus() int32` - Returns the HTTP status code
 - `GetMessage() string` - Returns the custom error message
-- `Join(errs ...error) error` - Wraps the error with additional errors
-- `JoinWithMessage(msg string, errs ...error) error` - Wraps with custom message
+- `Join(errs ...error) error` - Wraps the error with `httpx.NewError`
+- `JoinWithMessage(msg string, errs ...error) error` - Wraps with a custom message
+
+There is no generated `GetReason()` method.
 
 Example generated code for the `TestError` enum:
 
