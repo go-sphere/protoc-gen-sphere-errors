@@ -44,3 +44,28 @@ func TestReplaceTemplateIfNeed(t *testing.T) {
 		t.Errorf("custom template not applied, got: %q", out)
 	}
 }
+
+func TestExecuteQuotesReasonAndMessage(t *testing.T) {
+	out, err := (&ErrorWrapper{
+		Name:           "UserError",
+		NewErrorsFunc:  "httpx.NewError",
+		ErrorsJoinFunc: "errors.Join",
+		Errors: []*ErrorInfo{{
+			Name:    "UserError",
+			Value:   "USER_ERROR_NOT_FOUND",
+			Status:  404,
+			Code:    1001,
+			Reason:  `user "bob" missing`,
+			Message: "line1\nline2",
+		}},
+	}).Execute()
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !strings.Contains(out, `return "user \"bob\" missing"`) {
+		t.Errorf("reason not Go-quoted, got:\n%s", out)
+	}
+	if !strings.Contains(out, `return "line1\nline2"`) {
+		t.Errorf("message not Go-quoted, got:\n%s", out)
+	}
+}

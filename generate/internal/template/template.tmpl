@@ -5,10 +5,10 @@ func (e {{.Name}}) Error() string {
     switch e {
     {{- range .Errors }}
     case {{.Name}}_{{.Value}}:
-        {{ if .HasReason }}return "{{ .Reason }}";{{ else }}return "{{.Name}}_{{.Value}}";{{ end }}
+        {{ if .HasReason }}return {{ goString .Reason }};{{ else }}return {{ goString (printf "%s_%s" .Name .Value) }};{{ end }}
     {{- end }}
     default:
-        return "{{.Name}}:UNKNOWN_ERROR";
+        return {{ goString (printf "%s:UNKNOWN_ERROR" $.Name) }};
     }
 }
 
@@ -38,7 +38,7 @@ func (e {{.Name}}) GetMessage() string {
     switch e {
     {{- range .Errors }}
     case {{.Name}}_{{.Value}}:
-        return "{{.Message}}";
+        return {{ goString .Message }};
     {{- end }}
     default:
         return "";

@@ -6,6 +6,7 @@ package template
 import (
 	_ "embed"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -54,7 +55,9 @@ type ErrorWrapper struct {
 
 // Execute renders the error-helper methods for the wrapped enum.
 func (e *ErrorWrapper) Execute() (string, error) {
-	tmpl, err := template.New("errors").Parse(errorsTemplate)
+	tmpl, err := template.New("errors").Funcs(template.FuncMap{
+		"goString": strconv.Quote,
+	}).Parse(errorsTemplate)
 	if err != nil {
 		return "", err
 	}
