@@ -33,20 +33,21 @@ func main() {
 		if err := errors.ReplaceTemplateIfNeed(*templateFile); err != nil {
 			return err
 		}
+		errPkg := strings.Split(*newErrorsFunc, ";")
+		if len(errPkg) != 2 {
+			return fmt.Errorf("invalid new_errors_func format, expected 'path;ident'")
+		}
+		cfg := &errors.Config{
+			NewErrorsFunc: protogen.GoIdent{
+				GoName:       errPkg[1],
+				GoImportPath: protogen.GoImportPath(errPkg[0]),
+			},
+		}
 		for _, f := range gen.Files {
 			if !f.Generate {
 				continue
 			}
-			errPkg := strings.Split(*newErrorsFunc, ";")
-			if len(errPkg) != 2 {
-				return fmt.Errorf("invalid new_errors_func format, expected 'path;ident'")
-			}
-			_, gErr := errors.GenerateFile(gen, f, &errors.Config{
-				NewErrorsFunc: protogen.GoIdent{
-					GoName:       errPkg[1],
-					GoImportPath: protogen.GoImportPath(errPkg[0]),
-				},
-			})
+			_, gErr := errors.GenerateFile(gen, f, cfg)
 			if gErr != nil {
 				return gErr
 			}
