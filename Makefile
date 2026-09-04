@@ -38,7 +38,10 @@ testdata:
 			-o $(TESTDATA)/pb/$$name.pb || exit 1; \
 	done
 
-.PHONY: test
+.PHONY: build test
+build:
+	$(GO) build ./...
+
 test: testdata
 	$(GO) test ./...
 
