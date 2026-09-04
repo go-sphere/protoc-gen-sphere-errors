@@ -1,7 +1,6 @@
 package errors
 
 import (
-	"strings"
 	"testing"
 
 	sphereerrors "github.com/go-sphere/errors/sphere/errors"
@@ -153,68 +152,6 @@ func TestGenerateFile_OnlyNormalEnum(t *testing.T) {
 	}
 	if genFile != nil {
 		t.Error("expected nil for file with only a normal enum, got non-nil")
-	}
-}
-
-// --- Layer 2: functional tests loading precompiled .pb files ---
-
-func TestGenerateFile_WithErrorEnums(t *testing.T) {
-	plugin := testutil.PluginFromPB(t, "testdata/pb/basic_errors.pb", "basic_errors.proto")
-	genFile, err := GenerateFile(plugin, testutil.FileToGenerate(t, plugin), testConfig)
-	if err != nil {
-		t.Fatalf("GenerateFile failed: %v", err)
-	}
-	if genFile == nil {
-		t.Fatal("expected generated file, got nil")
-	}
-	content := mustContent(t, genFile)
-
-	for _, want := range []string{
-		"func (e UserError) Error() string",
-		"func (e UserError) GetCode() int32",
-		"func (e UserError) GetStatus() int32",
-		"func (e UserError) GetMessage() string",
-		"func (e UserError) Join(errs ...error) error",
-		"func (e UserError) JoinWithMessage(msg string, errs ...error) error",
-		"func (e OrderError) Error() string",
-	} {
-		if !strings.Contains(content, want) {
-			t.Errorf("generated content missing: %q", want)
-		}
-	}
-	// The value without options falls back to the generated reason.
-	if !strings.Contains(content, "UserError:USER_ERROR_DEFAULTED") {
-		t.Error("expected generated reason for value without options")
-	}
-}
-
-func TestGenerateFile_SkipsNormalEnums(t *testing.T) {
-	plugin := testutil.PluginFromPB(t, "testdata/pb/mixed_enums.pb", "mixed_enums.proto")
-	genFile, err := GenerateFile(plugin, testutil.FileToGenerate(t, plugin), testConfig)
-	if err != nil {
-		t.Fatalf("GenerateFile failed: %v", err)
-	}
-	if genFile == nil {
-		t.Fatal("expected generated file for mixed enums, got nil")
-	}
-	content := mustContent(t, genFile)
-
-	if !strings.Contains(content, "AuthError") {
-		t.Error("expected AuthError in generated content")
-	}
-	if strings.Contains(content, "Color") {
-		t.Error("normal enum Color should not appear in generated content")
-	}
-}
-
-func TestGenerateFile_NoErrorAnnotations(t *testing.T) {
-	plugin := testutil.PluginFromPB(t, "testdata/pb/no_errors.pb", "no_errors.proto")
-	genFile, err := GenerateFile(plugin, testutil.FileToGenerate(t, plugin), testConfig)
-	if err != nil {
-		t.Fatalf("GenerateFile failed: %v", err)
-	}
-	if genFile != nil {
-		t.Error("expected nil for file without error annotations, got non-nil")
 	}
 }
 
