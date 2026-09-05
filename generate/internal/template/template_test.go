@@ -7,48 +7,48 @@ import (
 	"testing"
 )
 
-// TestReplaceTemplateIfNeed verifies ENC-24: the errors plugin can override its
-// embedded template with a --template_file, matching the sphere and route
-// plugins.
-func TestReplaceTemplateIfNeed(t *testing.T) {
-	original := errorsTemplate
-	t.Cleanup(func() { errorsTemplate = original })
-
-	// An empty path is a no-op and leaves the embedded default in place.
-	if err := ReplaceTemplateIfNeed(""); err != nil {
-		t.Fatalf("empty path should be a no-op: %v", err)
+func TestNewRenderer(t *testing.T) {
+	defaultRenderer, err := NewRenderer("")
+	if err != nil {
+		t.Fatalf("default template should load: %v", err)
 	}
-	if errorsTemplate != original {
-		t.Fatal("empty path must not change the template")
-	}
-
-	// A missing file surfaces the read error.
-	if err := ReplaceTemplateIfNeed(filepath.Join(t.TempDir(), "does-not-exist.tmpl")); err == nil {
+	if _, err := NewRenderer(filepath.Join(t.TempDir(), "does-not-exist.tmpl")); err == nil {
 		t.Fatal("missing template file should return an error")
 	}
 
-	// A real file replaces the template and is used when rendering.
 	custom := "// custom template for {{.Name}}\n"
 	path := filepath.Join(t.TempDir(), "custom.tmpl")
 	if err := os.WriteFile(path, []byte(custom), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := ReplaceTemplateIfNeed(path); err != nil {
+	customRenderer, err := NewRenderer(path)
+	if err != nil {
 		t.Fatalf("valid template file should load: %v", err)
 	}
-	out, err := (&ErrorWrapper{Name: "MyError"}).Execute()
+	out, err := customRenderer.Execute(&ErrorWrapper{Name: "MyError"})
 	if err != nil {
 		t.Fatalf("Execute failed: %v", err)
 	}
 	if !strings.Contains(out, "// custom template for MyError") {
 		t.Errorf("custom template not applied, got: %q", out)
 	}
+	defaultOut, err := defaultRenderer.Execute(&ErrorWrapper{Name: "MyError"})
+	if err != nil {
+		t.Fatalf("default Execute failed: %v", err)
+	}
+	if strings.Contains(defaultOut, "// custom template") {
+		t.Fatal("custom renderer must not mutate the embedded default renderer")
+	}
 }
 
 func TestExecuteQuotesReasonAndMessage(t *testing.T) {
-	out, err := (&ErrorWrapper{
+	renderer, err := NewRenderer("")
+	if err != nil {
+		t.Fatalf("NewRenderer: %v", err)
+	}
+	out, err := renderer.Execute(&ErrorWrapper{
 		Name:           "UserError",
-		NewErrorsFunc:  "httpx.NewError",
+		NewErrorFunc:   "httpx.NewError",
 		ErrorsJoinFunc: "errors.Join",
 		Errors: []*ErrorInfo{{
 			Name:    "UserError",
@@ -58,7 +58,7 @@ func TestExecuteQuotesReasonAndMessage(t *testing.T) {
 			Reason:  `user "bob" missing`,
 			Message: "line1\nline2",
 		}},
-	}).Execute()
+	})
 	if err != nil {
 		t.Fatalf("Execute: %v", err)
 	}

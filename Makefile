@@ -38,18 +38,18 @@ testdata:
 			-o $(TESTDATA)/pb/$$name.pb || exit 1; \
 	done
 
+.PHONY: update-golden
+# Scoped to the errors package: it is the only one that defines -update-golden,
+# so passing the flag to ./generate/... would fail the template test binary.
+update-golden: testdata
+	$(GO) test ./generate/errors/ -run TestGolden -update-golden
+
 .PHONY: build test
 build:
 	$(GO) build ./...
 
 test: testdata
 	$(GO) test ./...
-
-# Regenerate golden files. Run after intentionally changing the template or
-# generation logic, then review the diff before committing.
-.PHONY: update-golden
-update-golden: testdata
-	$(GO) test ./generate/errors/ -run TestGolden -update-golden
 
 .PHONY: lint check install
 lint:

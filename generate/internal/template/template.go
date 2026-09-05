@@ -5,6 +5,7 @@ package template
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -12,21 +13,7 @@ import (
 )
 
 //go:embed template.tmpl
-var errorsTemplate string
-
-// ReplaceTemplateIfNeed overrides the built-in template with the file at path
-// when path is non-empty. It must be called once before Execute. An empty path
-// leaves the embedded default in place.
-func ReplaceTemplateIfNeed(path string) error {
-	if path != "" {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		errorsTemplate = string(raw)
-	}
-	return nil
-}
+var defaultTemplate string
 
 // ErrorInfo describes a single enum value rendered as an error case.
 type ErrorInfo struct {
@@ -49,21 +36,41 @@ func (i *ErrorInfo) HasReason() bool {
 type ErrorWrapper struct {
 	Name           string
 	Errors         []*ErrorInfo
-	NewErrorsFunc  string
+	NewErrorFunc   string
 	ErrorsJoinFunc string
 }
 
-// Execute renders the error-helper methods for the wrapped enum.
-func (e *ErrorWrapper) Execute() (string, error) {
+// Renderer owns a parsed error generation template. It is immutable after
+// construction and safe to reuse for every file in one plugin invocation.
+type Renderer struct {
+	template *template.Template
+}
+
+// NewRenderer loads and parses the embedded template, or the file at path when
+// path is non-empty.
+func NewRenderer(path string) (*Renderer, error) {
+	source := defaultTemplate
+	if path != "" {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("read template %q: %w", path, err)
+		}
+		source = string(raw)
+	}
 	tmpl, err := template.New("errors").Funcs(template.FuncMap{
 		"goString": strconv.Quote,
-	}).Parse(errorsTemplate)
+	}).Parse(source)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("parse template: %w", err)
 	}
+	return &Renderer{template: tmpl}, nil
+}
+
+// Execute renders the error-helper methods for an enum descriptor.
+func (r *Renderer) Execute(e *ErrorWrapper) (string, error) {
 	var buf strings.Builder
-	if err := tmpl.Execute(&buf, e); err != nil {
-		return "", err
+	if err := r.template.Execute(&buf, e); err != nil {
+		return "", fmt.Errorf("execute template: %w", err)
 	}
 	return buf.String(), nil
 }

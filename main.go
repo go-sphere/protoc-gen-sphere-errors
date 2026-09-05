@@ -3,55 +3,62 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/go-sphere/protoc-gen-sphere-errors/generate/errors"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
-const (
-	defaultErrorsPackage = "github.com/go-sphere/httpx"
-)
+const version = "0.0.1"
 
 var (
-	showVersion   = flag.Bool("version", false, "print the version and exit")
-	newErrorsFunc = flag.String("new_errors_func", defaultErrorsPackage+";NewError", "new errors func, must be func(status, code int32, message string, err error) error")
-	templateFile  = flag.String("template_file", "", "template file, if not set, use default template")
+	showVersion  = flag.Bool("version", false, "print the version and exit")
+	newErrorFunc = flag.String("new_errors_func", errors.DefaultNewErrorFunc, "new error func, must be func(status, code int32, message string, err error) error")
+	templateFile = flag.String("template_file", "", "template file, if not set, use default template")
 )
 
 func main() {
 	flag.Parse()
 	if *showVersion {
-		fmt.Printf("protoc-gen-sphere-errors %v\n", "0.0.1")
+		fmt.Printf("protoc-gen-sphere-errors %s\n", version)
 		return
 	}
 	protogen.Options{
 		ParamFunc: flag.CommandLine.Set,
-	}.Run(func(gen *protogen.Plugin) error {
-		gen.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
-		if err := errors.ReplaceTemplateIfNeed(*templateFile); err != nil {
+	}.Run(run)
+}
+
+func run(plugin *protogen.Plugin) error {
+	plugin.SupportedFeatures = uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)
+	cfg, err := extractConfig()
+	if err != nil {
+		return err
+	}
+	generator, err := errors.NewGenerator(cfg)
+	if err != nil {
+		return err
+	}
+	for _, file := range plugin.Files {
+		if !file.Generate {
+			continue
+		}
+		if _, err := generator.GenerateFile(plugin, file); err != nil {
 			return err
 		}
-		errPkg := strings.Split(*newErrorsFunc, ";")
-		if len(errPkg) != 2 {
-			return fmt.Errorf("invalid new_errors_func format, expected 'path;ident'")
-		}
-		cfg := &errors.Config{
-			NewErrorsFunc: protogen.GoIdent{
-				GoName:       errPkg[1],
-				GoImportPath: protogen.GoImportPath(errPkg[0]),
-			},
-		}
-		for _, f := range gen.Files {
-			if !f.Generate {
-				continue
-			}
-			_, gErr := errors.GenerateFile(gen, f, cfg)
-			if gErr != nil {
-				return gErr
-			}
-		}
-		return nil
-	})
+	}
+	return nil
+}
+
+func extractConfig() (*errors.Config, error) {
+	ident, err := errors.ParseGoIdent(*newErrorFunc)
+	if err != nil {
+		return nil, err
+	}
+	cfg := errors.DefaultConfig()
+	cfg.TemplateFile = *templateFile
+	cfg.NewErrorFunc = ident
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }

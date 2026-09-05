@@ -11,14 +11,51 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
-var testConfig = &Config{
-	NewErrorsFunc: protogen.GoIdent{
-		GoName:       "NewError",
-		GoImportPath: "github.com/go-sphere/httpx",
-	},
-}
+var testConfig = DefaultConfig()
 
 // --- Pure function unit tests (no protogen involved) ---
+
+func TestParseGoIdent(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{name: "valid", input: "github.com/example/errors;NewError"},
+		{name: "empty", input: "", wantErr: true},
+		{name: "missing separator", input: "github.com/example/errors/NewError", wantErr: true},
+		{name: "multiple separators", input: "github.com/example/errors;NewError;Other", wantErr: true},
+		{name: "empty import path", input: ";NewError", wantErr: true},
+		{name: "empty identifier", input: "github.com/example/errors;", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseGoIdent(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ParseGoIdent(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestDefaultConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("DefaultConfig().Validate() error = %v", err)
+	}
+	if got := string(cfg.NewErrorFunc.GoImportPath) + ";" + cfg.NewErrorFunc.GoName; got != DefaultNewErrorFunc {
+		t.Errorf("default NewErrorFunc = %q, want %q", got, DefaultNewErrorFunc)
+	}
+}
+
+func TestConfigValidate(t *testing.T) {
+	if err := (*Config)(nil).Validate(); err == nil {
+		t.Fatal("nil Config.Validate() error = nil")
+	}
+	if err := (&Config{}).Validate(); err == nil {
+		t.Fatal("empty Config.Validate() error = nil")
+	}
+}
 
 func TestResolveErrorInfo(t *testing.T) {
 	tests := []struct {
@@ -155,6 +192,21 @@ func TestGenerateFile_OnlyNormalEnum(t *testing.T) {
 	}
 }
 
+func TestNewGeneratorSnapshotsConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	generator, err := NewGenerator(cfg)
+	if err != nil {
+		t.Fatalf("NewGenerator() error = %v", err)
+	}
+	cfg.NewErrorFunc.GoName = "Changed"
+	if generator.cfg.NewErrorFunc.GoName != "NewError" {
+		t.Fatalf("Generator NewErrorFunc = %q after caller mutation", generator.cfg.NewErrorFunc.GoName)
+	}
+	if _, err := NewGenerator(nil); err == nil {
+		t.Fatal("NewGenerator(nil) error = nil")
+	}
+}
+
 // --- helpers ---
 
 func mustPluginFromFD(t *testing.T, fd *descriptorpb.FileDescriptorProto) *protogen.Plugin {
@@ -168,13 +220,4 @@ func mustPluginFromFD(t *testing.T, fd *descriptorpb.FileDescriptorProto) *proto
 		t.Fatalf("create plugin: %v", err)
 	}
 	return plugin
-}
-
-func mustContent(t *testing.T, g *protogen.GeneratedFile) string {
-	t.Helper()
-	b, err := g.Content()
-	if err != nil {
-		t.Fatalf("GeneratedFile.Content() failed: %v", err)
-	}
-	return string(b)
 }

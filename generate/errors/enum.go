@@ -9,15 +9,15 @@ import (
 
 // generateFileContent renders the error-helper methods for every error enum in
 // file and writes them to g.
-func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, config *Config) error {
-	newErrorsFunc := g.QualifiedGoIdent(config.NewErrorsFunc)
+func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, cfg *Config, renderer *template.Renderer) error {
+	newErrorFunc := g.QualifiedGoIdent(cfg.NewErrorFunc)
 	errorsJoinFunc := g.QualifiedGoIdent(errorsPackage.Ident("Join"))
 	for _, enum := range file.Enums {
-		ew := buildErrorWrapper(enum, newErrorsFunc, errorsJoinFunc)
+		ew := buildErrorWrapper(enum, newErrorFunc, errorsJoinFunc)
 		if ew == nil {
 			continue
 		}
-		content, err := ew.Execute()
+		content, err := renderer.Execute(ew)
 		if err != nil {
 			return err
 		}
@@ -29,16 +29,16 @@ func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, config 
 
 // buildErrorWrapper builds a template.ErrorWrapper from an enum. It returns nil
 // when the enum is not an error enum (the default_status option is missing) or
-// when it has no values. newErrorsFunc and errorsJoinFunc must be the already
+// when it has no values. newErrorFunc and errorsJoinFunc must be the already
 // qualified Go identifiers used by the generated code.
-func buildErrorWrapper(enum *protogen.Enum, newErrorsFunc, errorsJoinFunc string) *template.ErrorWrapper {
+func buildErrorWrapper(enum *protogen.Enum, newErrorFunc, errorsJoinFunc string) *template.ErrorWrapper {
 	if !proto.HasExtension(enum.Desc.Options(), errors.E_DefaultStatus) {
 		return nil
 	}
 	defaultStatus, _ := proto.GetExtension(enum.Desc.Options(), errors.E_DefaultStatus).(int32)
 	ew := &template.ErrorWrapper{
 		Name:           string(enum.Desc.Name()),
-		NewErrorsFunc:  newErrorsFunc,
+		NewErrorFunc:   newErrorFunc,
 		ErrorsJoinFunc: errorsJoinFunc,
 	}
 	// When allow_alias is enabled an enum can declare several names for the
