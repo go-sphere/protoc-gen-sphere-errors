@@ -1,5 +1,5 @@
-github.com/go-sphere/errors v0.0.1 h1:kdTFOB1L8yyNHaYgpYZPSHu/xeMsEkujmCpkzK+v3hQ=
-github.com/go-sphere/errors v0.0.1/go.mod h1:xShlZuLMCNDjkn8IHMcKVeImtjw1ax8dZuhpcrwqhho=
+github.com/go-sphere/errors v0.0.2 h1:WdauHxw1KMCAXaxlQdUHhP+tZQbJTmaaRJSqZR/TxN8=
+github.com/go-sphere/errors v0.0.2/go.mod h1:pTKsyvrxDH8Rpy0r18D4/PodZH3FRoNGyRqA8Z+6ZOQ=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 google.golang.org/protobuf v1.36.12 h1:pJOKDDOyeXErUroCihFAd5LQuwXBSpVnKGrj5o/fwxc=
