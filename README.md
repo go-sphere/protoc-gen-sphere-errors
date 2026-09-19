@@ -6,7 +6,7 @@ This code is inspired by [protoc-gen-go-errors](https://github.com/go-kratos/kra
 
 ## Features
 
-- Generates error structs with HTTP status codes
+- Generates `Error()`, `GetCode()`, `GetStatus()` and `GetMessage()` methods on each error enum, so enum values satisfy `error` and carry an HTTP status code
 - Supports custom error messages and reasons
 - Provides `Join` and `JoinWithMessage` methods for error composition
 - Integrates with the sphere error handling framework
@@ -19,6 +19,28 @@ To install `protoc-gen-sphere-errors`, use the following command:
 
 ```bash
 go install github.com/go-sphere/protoc-gen-sphere-errors@latest
+```
+
+## Flags
+
+The behavior of `protoc-gen-sphere-errors` can be customized with the following parameters. Type flags use the
+`import/path;Identifier` format.
+
+| Flag              | Description                                                                                                                                                              | Default                               |
+|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------|
+| `version`         | Print the current plugin version and exit.                                                                                                                               | `false`                               |
+| `new_errors_func` | Constructor called by the generated `Join` and `JoinWithMessage` methods; must have the signature `func(status, code int32, message string, err error) error`.            | `github.com/go-sphere/httpx;NewError` |
+| `template_file`   | Path to a custom Go template file. When empty the embedded default template is used.                                                                                     | `""`                                  |
+
+For example, to use a custom constructor instead of `httpx.NewError`:
+
+```yaml
+plugins:
+  - local: protoc-gen-sphere-errors
+    out: api
+    opt:
+      - paths=source_relative
+      - new_errors_func=github.com/example/errors;NewError
 ```
 
 ## Prerequisites
@@ -103,7 +125,7 @@ enum UserError {
 
 The plugin generates Go code with the following methods for each error enum:
 
-- `Error() string` - Implements `error`. Returns `reason` when set, otherwise the enum value name
+- `Error() string` - Implements `error`. Returns `reason` when set, otherwise the fallback `EnumName_ValueName` (`EnumName:UNKNOWN_ERROR` for the zero/unknown value)
 - `GetCode() int32` - Returns the error code (enum value)
 - `GetStatus() int32` - Returns the HTTP status code
 - `GetMessage() string` - Returns the custom error message
@@ -112,32 +134,30 @@ The plugin generates Go code with the following methods for each error enum:
 
 There is no generated `GetReason()` method.
 
+The enum's zero value (by convention `<ENUM>_UNSPECIFIED`) is never emitted as a case, so it stays a plain Go zero value: `Error()`/`GetMessage()` return their fallback strings and `GetStatus()` returns 500. Only values with a non-zero number are treated as real errors. When an enum value has `allow_alias` alternatives, the first declared name for each number is used.
+
 Example generated code for the `TestError` enum:
 
 ```go
 // Error implements the error interface
 func (e TestError) Error() string {
     switch e {
-    case TestError_TEST_ERROR_UNSPECIFIED:
-        return "TestError_TEST_ERROR_UNSPECIFIED"
     case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
         return "INVALID_ARGUMENT"  // Uses reason when specified
     case TestError_TEST_ERROR_INVALID_PATH_TEST2:
-        return "TestError_TEST_ERROR_INVALID_PATH_TEST2"
+        return "TestError_TEST_ERROR_INVALID_PATH_TEST2"  // Fallback reason: EnumName_ValueName
     case TestError_TEST_ERROR_UNAUTHORIZED:
         return "UNAUTHORIZED"  // Uses reason when specified
     case TestError_TEST_ERROR_FORBIDDEN:
         return "FORBIDDEN"  // Uses reason when specified
     default:
-        return "TestError:UNKNOWN_ERROR"
+        return "TestError:UNKNOWN_ERROR"  // Zero/unknown value
     }
 }
 
 // GetCode returns the error code (enum value)
 func (e TestError) GetCode() int32 {
     switch e {
-    case TestError_TEST_ERROR_UNSPECIFIED:
-        return 0
     case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
         return 1000
     case TestError_TEST_ERROR_INVALID_PATH_TEST2:
@@ -154,8 +174,6 @@ func (e TestError) GetCode() int32 {
 // GetStatus returns the HTTP status code
 func (e TestError) GetStatus() int32 {
     switch e {
-    case TestError_TEST_ERROR_UNSPECIFIED:
-        return 500  // Uses default_status
     case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
         return 400
     case TestError_TEST_ERROR_INVALID_PATH_TEST2:
@@ -165,7 +183,7 @@ func (e TestError) GetStatus() int32 {
     case TestError_TEST_ERROR_FORBIDDEN:
         return 403
     default:
-        return 500  // Uses default_status
+        return 500  // Zero/unknown value
     }
 }
 
@@ -192,7 +210,7 @@ func (e TestError) Join(errs ...error) error {
     if msg == "" {
         msg = e.Error()
     }
-    return statuserr.NewError(
+    return httpx.NewError(
         e.GetStatus(),
         e.GetCode(),
         msg,
@@ -203,7 +221,7 @@ func (e TestError) Join(errs ...error) error {
 // JoinWithMessage wraps the error with a custom message and additional errors
 func (e TestError) JoinWithMessage(msg string, errs ...error) error {
     allErrs := append([]error{e}, errs...)
-    return statuserr.NewError(
+    return httpx.NewError(
         e.GetStatus(),
         e.GetCode(),
         msg,
@@ -315,16 +333,6 @@ func ErrorHandlingMiddleware() gin.HandlerFunc {
     }
 }
 ```
-
-## Features
-
-- **HTTP Status Code Integration**: Each error automatically provides the correct HTTP status code
-- **Custom Error Messages**: Support for human-readable error messages in multiple languages
-- **Error Reasons**: Machine-readable reason codes for programmatic error handling
-- **Error Composition**: `Join` and `JoinWithMessage` methods for error wrapping and context
-- **Default Status Codes**: Enum-level default status codes with per-value overrides
-- **Framework Integration**: Seamless integration with sphere error handling framework
-- **Type Safety**: Generated errors implement Go's error interface with additional methods
 
 ## Error Handling Best Practices
 
