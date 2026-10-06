@@ -26,7 +26,16 @@ type goldenCase struct {
 	protoName  string // proto path inside the descriptor set
 	wantFile   bool   // whether a generated file is expected
 	goldenFile string // testdata/golden/<name>.errors.pb.go (empty when wantFile is false)
+
+	// newErrorFunc overrides Config.NewErrorFunc ("import/path;Ident") when
+	// non-empty; empty means the plugin default.
+	newErrorFunc string
 }
+
+// httpxNewErrorFunc is the pre-0.0.4 default constructor. Users opt back into
+// it with new_errors_func=github.com/go-sphere/httpx;NewError; the *_httpx
+// golden cases pin that output byte-for-byte to what the old default produced.
+const httpxNewErrorFunc = "github.com/go-sphere/httpx;NewError"
 
 func goldenCases() []goldenCase {
 	return []goldenCase{
@@ -51,6 +60,32 @@ func goldenCases() []goldenCase {
 			wantFile:   true,
 			goldenFile: "testdata/golden/alias_errors.errors.pb.go",
 		},
+		// Compatibility: the old default, now passed explicitly, must keep
+		// generating exactly the pre-0.0.4 output.
+		{
+			name:         "basic_errors_httpx",
+			pbFile:       "testdata/pb/basic_errors.pb",
+			protoName:    "basic_errors.proto",
+			wantFile:     true,
+			goldenFile:   "testdata/golden/basic_errors_httpx.errors.pb.go",
+			newErrorFunc: httpxNewErrorFunc,
+		},
+		{
+			name:         "mixed_enums_httpx",
+			pbFile:       "testdata/pb/mixed_enums.pb",
+			protoName:    "mixed_enums.proto",
+			wantFile:     true,
+			goldenFile:   "testdata/golden/mixed_enums_httpx.errors.pb.go",
+			newErrorFunc: httpxNewErrorFunc,
+		},
+		{
+			name:         "alias_errors_httpx",
+			pbFile:       "testdata/pb/alias_errors.pb",
+			protoName:    "alias_errors.proto",
+			wantFile:     true,
+			goldenFile:   "testdata/golden/alias_errors_httpx.errors.pb.go",
+			newErrorFunc: httpxNewErrorFunc,
+		},
 		{
 			name:      "no_errors",
 			pbFile:    "testdata/pb/no_errors.pb",
@@ -70,6 +105,13 @@ func (tt goldenCase) generate(t *testing.T) []byte {
 
 	cfg := *testConfig
 	cfg.PluginVersion = goldenPluginVersion
+	if tt.newErrorFunc != "" {
+		ident, err := ParseGoIdent(tt.newErrorFunc)
+		if err != nil {
+			t.Fatalf("ParseGoIdent(%q) failed: %v", tt.newErrorFunc, err)
+		}
+		cfg.NewErrorFunc = ident
+	}
 	genFile, err := GenerateFile(plugin, file, &cfg)
 	if err != nil {
 		t.Fatalf("GenerateFile(%s) failed: %v", tt.name, err)

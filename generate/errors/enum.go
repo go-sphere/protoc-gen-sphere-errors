@@ -10,8 +10,13 @@ import (
 // generateFileContent renders the error-helper methods for every error enum in
 // file and writes them to g.
 func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, cfg *Config, renderer *template.Renderer) error {
-	newErrorFunc := g.QualifiedGoIdent(cfg.NewErrorFunc)
+	// Qualify the standard library errors package first: protogen hands out
+	// local package names in first-use order, so this keeps stdlib "errors"
+	// unaliased when the constructor's package also has the base name "errors"
+	// (as the default, github.com/go-sphere/errors/sphere/errors, does). That
+	// package is then imported as "errors1".
 	errorsJoinFunc := g.QualifiedGoIdent(errorsPackage.Ident("Join"))
+	newErrorFunc := g.QualifiedGoIdent(cfg.NewErrorFunc)
 	for _, enum := range file.Enums {
 		ew := buildErrorWrapper(enum, newErrorFunc, errorsJoinFunc)
 		if ew == nil {

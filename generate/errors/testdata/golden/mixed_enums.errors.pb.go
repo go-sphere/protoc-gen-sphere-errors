@@ -8,7 +8,7 @@ package mixed
 
 import (
 	errors "errors"
-	httpx "github.com/go-sphere/httpx"
+	errors1 "github.com/go-sphere/errors/sphere/errors"
 )
 
 func (e AuthError) Error() string {
@@ -53,7 +53,7 @@ func (e AuthError) Join(errs ...error) error {
 	if msg == "" {
 		msg = e.Error()
 	}
-	return httpx.NewError(
+	return errors1.NewError(
 		e.GetStatus(),
 		e.GetCode(),
 		msg,
@@ -63,7 +63,7 @@ func (e AuthError) Join(errs ...error) error {
 
 func (e AuthError) JoinWithMessage(msg string, errs ...error) error {
 	allErrs := append([]error{e}, errs...)
-	return httpx.NewError(
+	return errors1.NewError(
 		e.GetStatus(),
 		e.GetCode(),
 		msg,

@@ -8,7 +8,7 @@ package basic
 
 import (
 	errors "errors"
-	httpx "github.com/go-sphere/httpx"
+	errors1 "github.com/go-sphere/errors/sphere/errors"
 )
 
 func (e UserError) Error() string {
@@ -77,7 +77,7 @@ func (e UserError) Join(errs ...error) error {
 	if msg == "" {
 		msg = e.Error()
 	}
-	return httpx.NewError(
+	return errors1.NewError(
 		e.GetStatus(),
 		e.GetCode(),
 		msg,
@@ -87,7 +87,7 @@ func (e UserError) Join(errs ...error) error {
 
 func (e UserError) JoinWithMessage(msg string, errs ...error) error {
 	allErrs := append([]error{e}, errs...)
-	return httpx.NewError(
+	return errors1.NewError(
 		e.GetStatus(),
 		e.GetCode(),
 		msg,
@@ -137,7 +137,7 @@ func (e OrderError) Join(errs ...error) error {
 	if msg == "" {
 		msg = e.Error()
 	}
-	return httpx.NewError(
+	return errors1.NewError(
 		e.GetStatus(),
 		e.GetCode(),
 		msg,
@@ -147,7 +147,7 @@ func (e OrderError) Join(errs ...error) error {
 
 func (e OrderError) JoinWithMessage(msg string, errs ...error) error {
 	allErrs := append([]error{e}, errs...)
-	return httpx.NewError(
+	return errors1.NewError(
 		e.GetStatus(),
 		e.GetCode(),
 		msg,

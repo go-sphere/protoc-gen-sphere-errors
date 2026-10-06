@@ -29,10 +29,33 @@ The behavior of `protoc-gen-sphere-errors` can be customized with the following 
 | Flag              | Description                                                                                                                                                              | Default                               |
 |-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------|
 | `version`         | Print the current plugin version and exit.                                                                                                                               | `false`                               |
-| `new_errors_func` | Constructor called by the generated `Join` and `JoinWithMessage` methods; must have the signature `func(status, code int32, message string, err error) error`.            | `github.com/go-sphere/httpx;NewError` |
+| `new_errors_func` | Constructor called by the generated `Join` and `JoinWithMessage` methods; must have the signature `func(status, code int32, message string, err error) error`. | `github.com/go-sphere/errors/sphere/errors;NewError` |
 | `template_file`   | Path to a custom Go template file. When empty the embedded default template is used.                                                                                     | `""`                                  |
 
-For example, to use a custom constructor instead of `httpx.NewError`:
+The default constructor, `NewError` from
+[`github.com/go-sphere/errors`](https://github.com/go-sphere/errors), lives in the
+same package that every `.pb.go` importing `sphere/errors/errors.proto` already
+links, so generated error code depends only on the standard library and that
+contract module, not on an HTTP adapter. The returned error exposes
+`GetStatus()`, `GetCode()` and `GetMessage()`, which `github.com/go-sphere/httpx`
+recognizes structurally, and its semantics match `httpx.NewError`. Because both
+packages are named `errors`, the generated file imports it as `errors1`.
+
+> **Changed in v0.0.4:** the default used to be `github.com/go-sphere/httpx;NewError`.
+> Generated code now needs a `github.com/go-sphere/errors` release that provides
+> `NewError`. To keep the previous output byte-for-byte, set the old value
+> explicitly:
+>
+> ```yaml
+> plugins:
+>   - local: protoc-gen-sphere-errors
+>     out: api
+>     opt:
+>       - paths=source_relative
+>       - new_errors_func=github.com/go-sphere/httpx;NewError
+> ```
+
+For example, to use a custom constructor instead:
 
 ```yaml
 plugins:
@@ -129,7 +152,7 @@ The plugin generates Go code with the following methods for each error enum:
 - `GetCode() int32` - Returns the error code (enum value)
 - `GetStatus() int32` - Returns the HTTP status code
 - `GetMessage() string` - Returns the custom error message
-- `Join(errs ...error) error` - Wraps the error with `httpx.NewError`
+- `Join(errs ...error) error` - Wraps the error with the `new_errors_func` constructor (default `errors.NewError` from `github.com/go-sphere/errors/sphere/errors`)
 - `JoinWithMessage(msg string, errs ...error) error` - Wraps with a custom message
 
 There is no generated `GetReason()` method.
@@ -204,13 +227,14 @@ func (e TestError) GetMessage() string {
 }
 
 // Join wraps the error with additional errors
+// (errors1 is github.com/go-sphere/errors/sphere/errors)
 func (e TestError) Join(errs ...error) error {
     allErrs := append([]error{e}, errs...)
     msg := e.GetMessage()
     if msg == "" {
         msg = e.Error()
     }
-    return httpx.NewError(
+    return errors1.NewError(
         e.GetStatus(),
         e.GetCode(),
         msg,
@@ -221,7 +245,7 @@ func (e TestError) Join(errs ...error) error {
 // JoinWithMessage wraps the error with a custom message and additional errors
 func (e TestError) JoinWithMessage(msg string, errs ...error) error {
     allErrs := append([]error{e}, errs...)
-    return httpx.NewError(
+    return errors1.NewError(
         e.GetStatus(),
         e.GetCode(),
         msg,

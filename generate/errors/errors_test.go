@@ -48,6 +48,16 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
+// TestDefaultNewErrorFuncValue pins the default constructor. Changing it is a
+// breaking output change (guidelines §11): it must come with a release note and
+// golden compat cases for the previous default.
+func TestDefaultNewErrorFuncValue(t *testing.T) {
+	const want = "github.com/go-sphere/errors/sphere/errors;NewError"
+	if DefaultNewErrorFunc != want {
+		t.Fatalf("DefaultNewErrorFunc = %q, want %q", DefaultNewErrorFunc, want)
+	}
+}
+
 func TestConfigValidate(t *testing.T) {
 	if err := (*Config)(nil).Validate(); err == nil {
 		t.Fatal("nil Config.Validate() error = nil")

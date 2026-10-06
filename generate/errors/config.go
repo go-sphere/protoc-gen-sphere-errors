@@ -8,10 +8,14 @@ import (
 )
 
 const (
-	defaultErrorsPackage = "github.com/go-sphere/httpx"
+	defaultErrorsPackage = "github.com/go-sphere/errors/sphere/errors"
 
 	// DefaultNewErrorFunc is the default error constructor in
-	// "import/path;Ident" form.
+	// "import/path;Ident" form. It points at the contract module
+	// github.com/go-sphere/errors, which generated .pb.go files already link,
+	// so generated error code does not import an HTTP adapter. Before v0.0.4
+	// the default was "github.com/go-sphere/httpx;NewError"; users can still
+	// select it explicitly through the new_errors_func flag.
 	DefaultNewErrorFunc = defaultErrorsPackage + ";NewError"
 )
 
