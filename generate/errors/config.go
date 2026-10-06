@@ -22,6 +22,12 @@ type Config struct {
 	// NewErrorFunc is the constructor the generated Join helpers call. It must
 	// have the signature func(status, code int32, message string, err error) error.
 	NewErrorFunc protogen.GoIdent
+
+	// PluginVersion is recorded in the generated file header
+	// ("// - protoc-gen-sphere-errors <PluginVersion>"). main.go sets it from
+	// the binary's version; an empty value renders as "(unknown)". It does not
+	// affect anything but the header.
+	PluginVersion string
 }
 
 // ParseGoIdent parses an "import/path;Ident" string into a protogen.GoIdent.

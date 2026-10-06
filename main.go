@@ -57,6 +57,7 @@ func extractConfig() (*errors.Config, error) {
 	cfg := errors.DefaultConfig()
 	cfg.TemplateFile = *templateFile
 	cfg.NewErrorFunc = ident
+	cfg.PluginVersion = "v" + version
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
