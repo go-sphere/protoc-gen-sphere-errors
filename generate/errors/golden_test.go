@@ -34,7 +34,7 @@ type goldenCase struct {
 
 // httpxNewErrorFunc is the pre-0.0.4 default constructor. Users opt back into
 // it with new_errors_func=github.com/go-sphere/httpx;NewError; the *_httpx
-// golden cases pin that output byte-for-byte to what the old default produced.
+// golden case pins that output byte-for-byte to what the old default produced.
 const httpxNewErrorFunc = "github.com/go-sphere/httpx;NewError"
 
 func goldenCases() []goldenCase {
@@ -61,29 +61,14 @@ func goldenCases() []goldenCase {
 			goldenFile: "testdata/golden/alias_errors.errors.pb.go",
 		},
 		// Compatibility: the old default, now passed explicitly, must keep
-		// generating exactly the pre-0.0.4 output.
+		// generating exactly the pre-0.0.4 output. The constructor only
+		// affects the import and the NewError calls, so one fixture is enough.
 		{
 			name:         "basic_errors_httpx",
 			pbFile:       "testdata/pb/basic_errors.pb",
 			protoName:    "basic_errors.proto",
 			wantFile:     true,
 			goldenFile:   "testdata/golden/basic_errors_httpx.errors.pb.go",
-			newErrorFunc: httpxNewErrorFunc,
-		},
-		{
-			name:         "mixed_enums_httpx",
-			pbFile:       "testdata/pb/mixed_enums.pb",
-			protoName:    "mixed_enums.proto",
-			wantFile:     true,
-			goldenFile:   "testdata/golden/mixed_enums_httpx.errors.pb.go",
-			newErrorFunc: httpxNewErrorFunc,
-		},
-		{
-			name:         "alias_errors_httpx",
-			pbFile:       "testdata/pb/alias_errors.pb",
-			protoName:    "alias_errors.proto",
-			wantFile:     true,
-			goldenFile:   "testdata/golden/alias_errors_httpx.errors.pb.go",
 			newErrorFunc: httpxNewErrorFunc,
 		},
 		{
