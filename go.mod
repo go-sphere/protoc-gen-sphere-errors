@@ -3,6 +3,6 @@ module github.com/go-sphere/protoc-gen-sphere-errors
 go 1.26.8
 
 require (
-	github.com/go-sphere/errors v0.0.2
+	github.com/go-sphere/errors v0.0.3
 	google.golang.org/protobuf v1.36.12
 )
