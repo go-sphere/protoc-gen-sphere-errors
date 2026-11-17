@@ -47,15 +47,17 @@ func GenerateFile(plugin *protogen.Plugin, file *protogen.File, cfg *Config) (*p
 }
 
 // GenerateFile generates the <prefix>.errors.pb.go file for file. It returns a
-// nil GeneratedFile (and nil error) when file declares no error enums.
+// nil GeneratedFile (and nil error) when file declares no error enums with at
+// least one non-zero value.
 func (g *Generator) GenerateFile(plugin *protogen.Plugin, file *protogen.File) (*protogen.GeneratedFile, error) {
-	if len(file.Enums) == 0 || !hasErrorEnums(file.Enums) {
+	wrappers := collectErrorWrappers(file)
+	if len(wrappers) == 0 {
 		return nil, nil
 	}
 	filename := file.GeneratedFilenamePrefix + ".errors.pb.go"
 	generated := plugin.NewGeneratedFile(filename, file.GoImportPath)
 	generateFileHeader(plugin, file, generated, g.cfg.PluginVersion)
-	if err := generateFileContent(file, generated, g.cfg, g.renderer); err != nil {
+	if err := generateFileContent(wrappers, generated, g.cfg, g.renderer); err != nil {
 		return nil, err
 	}
 	return generated, nil

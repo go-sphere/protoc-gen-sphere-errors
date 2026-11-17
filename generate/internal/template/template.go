@@ -17,13 +17,24 @@ var defaultTemplate string
 
 // ErrorInfo describes a single enum value rendered as an error case.
 type ErrorInfo struct {
-	Name  string
-	Value string
+	Name   string
+	Value  string
+	GoName string
 
 	Status  int32
 	Code    int32
 	Reason  string
 	Message string
+}
+
+// CaseIdent returns the Go constant identifier for this enum value, preferring
+// GoName (which accounts for PascalCase conversion and enclosing message names)
+// and falling back to "<Name>_<Value>" when unset.
+func (i *ErrorInfo) CaseIdent() string {
+	if i.GoName != "" {
+		return i.GoName
+	}
+	return i.Name + "_" + i.Value
 }
 
 // HasReason reports whether an explicit reason string was provided.

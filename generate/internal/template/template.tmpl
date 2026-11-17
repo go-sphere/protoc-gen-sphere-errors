@@ -1,11 +1,11 @@
-{{- /*gotype: github.com/go-sphere/protoc-gen-sphere-errors/generate/template.ErrorInfo*/ -}}
+{{- /*gotype: github.com/go-sphere/protoc-gen-sphere-errors/generate/internal/template.ErrorWrapper*/ -}}
 {{$newErrorFunc := .NewErrorFunc}}
 {{$errorsJoinFunc := .ErrorsJoinFunc}}
 func (e {{.Name}}) Error() string {
     switch e {
     {{- range .Errors }}
-    case {{.Name}}_{{.Value}}:
-        {{ if .HasReason }}return {{ goString .Reason }};{{ else }}return {{ goString (printf "%s_%s" .Name .Value) }};{{ end }}
+    case {{.CaseIdent}}:
+        return {{ goString .Reason }};
     {{- end }}
     default:
         return {{ goString (printf "%s:UNKNOWN_ERROR" $.Name) }};
@@ -15,7 +15,7 @@ func (e {{.Name}}) Error() string {
 func (e {{.Name}}) GetCode() int32 {
     switch e {
     {{- range .Errors }}
-    case {{.Name}}_{{.Value}}:
+    case {{.CaseIdent}}:
         return {{.Code}};
     {{- end }}
     default:
@@ -26,7 +26,7 @@ func (e {{.Name}}) GetCode() int32 {
 func (e {{.Name}}) GetStatus() int32 {
     switch e {
     {{- range .Errors }}
-    case {{.Name}}_{{.Value}}:
+    case {{.CaseIdent}}:
         return {{.Status}};
     {{- end }}
     default:
@@ -37,7 +37,7 @@ func (e {{.Name}}) GetStatus() int32 {
 func (e {{.Name}}) GetMessage() string {
     switch e {
     {{- range .Errors }}
-    case {{.Name}}_{{.Value}}:
+    case {{.CaseIdent}}:
         return {{ goString .Message }};
     {{- end }}
     default:

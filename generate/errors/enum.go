@@ -7,9 +7,40 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// generateFileContent renders the error-helper methods for every error enum in
-// file and writes them to g.
-func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, cfg *Config, renderer *template.Renderer) error {
+// collectErrorWrappers walks all top-level and message-nested enums in file
+// (skipping map entries) and builds an ErrorWrapper for every error enum that
+// has at least one non-zero value.
+func collectErrorWrappers(file *protogen.File) []*template.ErrorWrapper {
+	var wrappers []*template.ErrorWrapper
+	for _, enum := range file.Enums {
+		if ew := buildErrorWrapper(enum); ew != nil {
+			wrappers = append(wrappers, ew)
+		}
+	}
+	for _, msg := range file.Messages {
+		wrappers = appendMessageErrorWrappers(wrappers, msg)
+	}
+	return wrappers
+}
+
+func appendMessageErrorWrappers(dst []*template.ErrorWrapper, msg *protogen.Message) []*template.ErrorWrapper {
+	if msg.Desc.IsMapEntry() {
+		return dst
+	}
+	for _, enum := range msg.Enums {
+		if ew := buildErrorWrapper(enum); ew != nil {
+			dst = append(dst, ew)
+		}
+	}
+	for _, nested := range msg.Messages {
+		dst = appendMessageErrorWrappers(dst, nested)
+	}
+	return dst
+}
+
+// generateFileContent renders the error-helper methods for wrappers and writes
+// them to g.
+func generateFileContent(wrappers []*template.ErrorWrapper, g *protogen.GeneratedFile, cfg *Config, renderer *template.Renderer) error {
 	// Qualify the standard library errors package first: protogen hands out
 	// local package names in first-use order, so this keeps stdlib "errors"
 	// unaliased when the constructor's package also has the base name "errors"
@@ -17,11 +48,9 @@ func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, cfg *Co
 	// package is then imported as "errors1".
 	errorsJoinFunc := g.QualifiedGoIdent(errorsPackage.Ident("Join"))
 	newErrorFunc := g.QualifiedGoIdent(cfg.NewErrorFunc)
-	for _, enum := range file.Enums {
-		ew := buildErrorWrapper(enum, newErrorFunc, errorsJoinFunc)
-		if ew == nil {
-			continue
-		}
+	for _, ew := range wrappers {
+		ew.NewErrorFunc = newErrorFunc
+		ew.ErrorsJoinFunc = errorsJoinFunc
 		content, err := renderer.Execute(ew)
 		if err != nil {
 			return err
@@ -34,17 +63,15 @@ func generateFileContent(file *protogen.File, g *protogen.GeneratedFile, cfg *Co
 
 // buildErrorWrapper builds a template.ErrorWrapper from an enum. It returns nil
 // when the enum is not an error enum (the default_status option is missing) or
-// when it has no values. newErrorFunc and errorsJoinFunc must be the already
-// qualified Go identifiers used by the generated code.
-func buildErrorWrapper(enum *protogen.Enum, newErrorFunc, errorsJoinFunc string) *template.ErrorWrapper {
+// when it has no non-zero values.
+func buildErrorWrapper(enum *protogen.Enum) *template.ErrorWrapper {
 	if !proto.HasExtension(enum.Desc.Options(), errors.E_DefaultStatus) {
 		return nil
 	}
 	defaultStatus, _ := proto.GetExtension(enum.Desc.Options(), errors.E_DefaultStatus).(int32)
+	enumGoName := enum.GoIdent.GoName
 	ew := &template.ErrorWrapper{
-		Name:           string(enum.Desc.Name()),
-		NewErrorFunc:   newErrorFunc,
-		ErrorsJoinFunc: errorsJoinFunc,
+		Name: enumGoName,
 	}
 	// When allow_alias is enabled an enum can declare several names for the
 	// same number, each a distinct EnumValueDescriptor. Emitting a switch case
@@ -69,12 +96,13 @@ func buildErrorWrapper(enum *protogen.Enum, newErrorFunc, errorsJoinFunc string)
 		}
 		seen[number] = struct{}{}
 		info := resolveErrorInfo(
-			string(enum.Desc.Name()),
+			enumGoName,
 			string(v.Desc.Name()),
 			number,
 			enumValueOptions(v),
 			defaultStatus,
 		)
+		info.GoName = v.GoIdent.GoName
 		ew.Errors = append(ew.Errors, info)
 	}
 	if len(ew.Errors) == 0 {
@@ -114,15 +142,4 @@ func enumValueOptions(v *protogen.EnumValue) *errors.Error {
 		}
 	}
 	return &errors.Error{}
-}
-
-// hasErrorEnums reports whether enums contains at least one error enum (an enum
-// carrying the default_status option and at least one value).
-func hasErrorEnums(enums []*protogen.Enum) bool {
-	for _, v := range enums {
-		if proto.HasExtension(v.Desc.Options(), errors.E_DefaultStatus) && len(v.Values) > 0 {
-			return true
-		}
-	}
-	return false
 }

@@ -2,7 +2,10 @@ package errors
 
 import (
 	"errors"
+	"fmt"
+	"go/token"
 	"strings"
+	"unicode"
 
 	"google.golang.org/protobuf/compiler/protogen"
 )
@@ -40,10 +43,14 @@ func ParseGoIdent(raw string) (protogen.GoIdent, error) {
 	if !ok || importPath == "" || goName == "" || strings.Contains(goName, ";") {
 		return protogen.GoIdent{}, errors.New("invalid GoIdent format, expected 'import/path;Ident'")
 	}
-	return protogen.GoIdent{
+	ident := protogen.GoIdent{
 		GoName:       goName,
 		GoImportPath: protogen.GoImportPath(importPath),
-	}, nil
+	}
+	if err := validateGoIdent(ident); err != nil {
+		return protogen.GoIdent{}, err
+	}
+	return ident, nil
 }
 
 // Validate checks that the required error constructor is configured.
@@ -53,6 +60,36 @@ func (c *Config) Validate() error {
 	}
 	if c.NewErrorFunc.GoImportPath == "" || c.NewErrorFunc.GoName == "" {
 		return errors.New("new_errors_func is required (format: 'import/path;Ident')")
+	}
+	if err := validateGoIdent(c.NewErrorFunc); err != nil {
+		return fmt.Errorf("invalid new_errors_func: %w", err)
+	}
+	return nil
+}
+
+func validateGoIdent(ident protogen.GoIdent) error {
+	if err := validateImportPath(string(ident.GoImportPath)); err != nil {
+		return err
+	}
+	if !token.IsIdentifier(ident.GoName) {
+		return fmt.Errorf("invalid Go identifier %q", ident.GoName)
+	}
+	return nil
+}
+
+func validateImportPath(importPath string) error {
+	if importPath == "" {
+		return errors.New("import path cannot be empty")
+	}
+	for seg := range strings.SplitSeq(importPath, "/") {
+		if seg == "" || seg == "." || seg == ".." {
+			return fmt.Errorf("invalid segment %q in import path %q", seg, importPath)
+		}
+	}
+	for _, r := range importPath {
+		if !unicode.IsGraphic(r) || unicode.IsSpace(r) || r == '\ufffd' || strings.ContainsRune("!\"#$%&'()*,:;<=>?@[\\]^`{|}", r) {
+			return fmt.Errorf("illegal character %q in import path %q", r, importPath)
+		}
 	}
 	return nil
 }

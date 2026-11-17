@@ -69,3 +69,40 @@ func TestExecuteQuotesReasonAndMessage(t *testing.T) {
 		t.Errorf("message not Go-quoted, got:\n%s", out)
 	}
 }
+
+func TestCaseIdent(t *testing.T) {
+	if got := (&ErrorInfo{Name: "UserError", Value: "USER_ERROR_NOT_FOUND"}).CaseIdent(); got != "UserError_USER_ERROR_NOT_FOUND" {
+		t.Fatalf("CaseIdent() fallback = %q, want UserError_USER_ERROR_NOT_FOUND", got)
+	}
+	if got := (&ErrorInfo{
+		Name:   "Outer_InnerError",
+		Value:  "INNER_ERROR_BAD",
+		GoName: "Outer_INNER_ERROR_BAD",
+	}).CaseIdent(); got != "Outer_INNER_ERROR_BAD" {
+		t.Fatalf("CaseIdent() with GoName = %q, want Outer_INNER_ERROR_BAD", got)
+	}
+
+	renderer, err := NewRenderer("")
+	if err != nil {
+		t.Fatalf("NewRenderer: %v", err)
+	}
+	out, err := renderer.Execute(&ErrorWrapper{
+		Name:           "Outer_InnerError",
+		NewErrorFunc:   "errors1.NewError",
+		ErrorsJoinFunc: "errors.Join",
+		Errors: []*ErrorInfo{{
+			Name:   "Outer_InnerError",
+			Value:  "INNER_ERROR_BAD",
+			GoName: "Outer_INNER_ERROR_BAD",
+			Status: 400,
+			Code:   1,
+			Reason: "Outer_InnerError:INNER_ERROR_BAD",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+	if !strings.Contains(out, "case Outer_INNER_ERROR_BAD:") {
+		t.Errorf("expected nested GoName case ident in output:\n%s", out)
+	}
+}

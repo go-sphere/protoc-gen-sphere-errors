@@ -90,6 +90,9 @@ managed:
     - file_option: go_package_prefix
       value: github.com/go-sphere/sphere-layout/api
 plugins:
+  - local: protoc-gen-go
+    out: api
+    opt: paths=source_relative
   - local: protoc-gen-sphere-errors
     out: api
     opt: paths=source_relative
@@ -148,7 +151,7 @@ enum UserError {
 
 The plugin generates Go code with the following methods for each error enum:
 
-- `Error() string` - Implements `error`. Returns `reason` when set, otherwise the fallback `EnumName_ValueName` (`EnumName:UNKNOWN_ERROR` for the zero/unknown value)
+- `Error() string` - Implements `error`. Returns `reason` when set, otherwise the fallback `EnumName:VALUE_NAME` (`EnumName:UNKNOWN_ERROR` for the zero/unknown value)
 - `GetCode() int32` - Returns the error code (enum value)
 - `GetStatus() int32` - Returns the HTTP status code
 - `GetMessage() string` - Returns the custom error message
@@ -157,7 +160,7 @@ The plugin generates Go code with the following methods for each error enum:
 
 There is no generated `GetReason()` method.
 
-The enum's zero value (by convention `<ENUM>_UNSPECIFIED`) is never emitted as a case, so it stays a plain Go zero value: `Error()`/`GetMessage()` return their fallback strings and `GetStatus()` returns 500. Only values with a non-zero number are treated as real errors. When an enum value has `allow_alias` alternatives, the first declared name for each number is used.
+The enum's zero value (by convention `<ENUM>_UNSPECIFIED`) is never emitted as a case, so it stays a plain Go zero value: `Error()`/`GetMessage()` return their fallback strings and `GetStatus()` returns 500. Only values with a non-zero number are treated as real errors; files whose error enums only declare a zero value produce no `.errors.pb.go` output. Both top-level enums and message-nested enums (including snake_case enum names converted to PascalCase by `protoc-gen-go`) are supported. When an enum value has `allow_alias` alternatives, the first declared name for each number is used.
 
 Example generated code for the `TestError` enum:
 
@@ -168,7 +171,7 @@ func (e TestError) Error() string {
     case TestError_TEST_ERROR_INVALID_FIELD_TEST1:
         return "INVALID_ARGUMENT"  // Uses reason when specified
     case TestError_TEST_ERROR_INVALID_PATH_TEST2:
-        return "TestError_TEST_ERROR_INVALID_PATH_TEST2"  // Fallback reason: EnumName_ValueName
+        return "TestError:TEST_ERROR_INVALID_PATH_TEST2"  // Fallback reason: EnumName:VALUE_NAME
     case TestError_TEST_ERROR_UNAUTHORIZED:
         return "UNAUTHORIZED"  // Uses reason when specified
     case TestError_TEST_ERROR_FORBIDDEN:
@@ -431,9 +434,9 @@ enum ValidationError {
 
 The error plugin works seamlessly with other sphere components:
 
-- **protoc-gen-sphere**: HTTP handlers automatically handle sphere errors and return appropriate status codes
-- **sphere/server/ginx**: Response wrapper functions understand sphere errors
-- **sphere/core/errors**: Base error handling framework
+- **protoc-gen-sphere**: HTTP handlers automatically propagate sphere errors and return appropriate status codes
+- **github.com/go-sphere/errors**: Base error proto definitions and `NewError` constructor
+- **github.com/go-sphere/httpx** & **github.com/go-sphere/sphere/server/httpz**: HTTP adapters and response helpers that read `GetStatus()`, `GetCode()`, and `GetMessage()`
 - **protovalidate**: Validation errors can be wrapped with sphere errors for consistent error responses
 
 ## Options
