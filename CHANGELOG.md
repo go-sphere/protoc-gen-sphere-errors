@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.0.5 (2026-11-19)
+
 ### Added
 
 - Support non-PascalCase top-level enum names (using `enum.GoIdent.GoName`) and
